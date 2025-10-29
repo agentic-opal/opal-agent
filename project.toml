@@ -1,0 +1,61 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "opal-agent"
+dynamic = ["version"]
+requires-python = ">=3.11"
+
+authors = [{ name = "Oak Ridge National Laboratory" }]
+description = "An MCP-based agent for OPAL"
+readme = "README.md"
+license = "MIT"
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+]
+keywords = [
+    "mcp",
+    "agent",
+    "agentic-ai",
+    "scientific-workflows",
+    "llm",
+    "reproducibility",
+    "workflow-orchestration",
+]
+
+dependencies = [
+    "mcp[cli]",
+    "langchain_community",
+    "langchain_openai",
+    "streamlit",
+    "PyMuPDF",
+    "matplotlib",
+]
+
+dev = [
+    "pytest",
+    "ruff",
+    "jupyterlab",
+]
+
+[tool.hatch.version]
+path = "src/opal_agent/version.py"
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+extend-select = ["E501", "D"]
+ignore = ["D200", "D212", "D105", "D401", "D205", "D100"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/opal_agent"]
+
+[project.scripts]
+opal-agent = "opal_agent.cli:main"
