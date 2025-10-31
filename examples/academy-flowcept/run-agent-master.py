@@ -16,15 +16,23 @@ from flowcept import flowcept_task
 from flowcept.instrumentation.flowcept_decorator import flowcept
 from flowcept.flowcept_api.flowcept_controller import Flowcept
 
+# factory = RedisExchangeFactory(
+#     hostname="localhost",
+#     port=6379,
+# )
+
 factory = RedisExchangeFactory(
-    hostname="localhost",
-    port=6379,
+    hostname="redis-stf053-demo.streamio.s3m.olcf.ornl.gov",
+    port=443,
+    username="stf053",
+    password="VJVZafCVXmSvLEqN",
+    ssl=True,
 )
 
 # factory = HttpExchangeFactory(
 #     "https://exchange.academy-agents.org",
 #     auth_method="globus",
-#     ssl_verify=False,
+#     ssl_verify=True,
 # )
 
 executor = ThreadPoolExecutor(

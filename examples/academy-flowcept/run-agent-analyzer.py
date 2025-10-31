@@ -17,15 +17,22 @@ from flowcept import Flowcept, flowcept_task
 from flowcept.instrumentation.flowcept_decorator import flowcept
 
 
+# factory = RedisExchangeFactory(
+#     hostname="localhost",
+#     port=6379,
+# )
 factory = RedisExchangeFactory(
-    hostname="localhost",
-    port=6379,
+    hostname="redis-stf053-demo.streamio.s3m.olcf.ornl.gov",
+    port=443,
+    username="stf053",
+    password="VJVZafCVXmSvLEqN",
+    ssl=True,
 )
 
 # factory = HttpExchangeFactory(
 #     "https://exchange.academy-agents.org",
 #     auth_method="globus",
-#     ssl_verify=False,
+#     ssl_verify=True,
 # )
 
 executor = ThreadPoolExecutor(
@@ -61,7 +68,7 @@ class AgentAnalyzer(Agent):
         return master_id
 
     @action
-    @flowcept_task
+    #@flowcept_task
     async def consume_data(self, message: Dict) -> Dict:
         logging.info(f"Message from master: {message}")
         self.simulation_data = message
@@ -75,7 +82,7 @@ class AgentAnalyzer(Agent):
     async def get_simulation_data(self):
         return self.simulation_data
 
-@flowcept()
+#@flowcept()
 async def main():
     async with await Manager.from_exchange_factory(
             factory=factory,
