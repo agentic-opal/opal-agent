@@ -3,7 +3,7 @@ import logging
 import json
 import uuid
 from concurrent.futures import ThreadPoolExecutor
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Union, Any
 
 from academy.agent import Agent
 from academy.agent import action
@@ -49,7 +49,7 @@ executor = ThreadPoolExecutor(
 
 
 class AgentMaster(Agent):
-    peer_agent: uuid.UUID = None
+    peer_agent_uid: uuid.UUID = None
 
     async def agent_on_startup(self) -> None:
         logging.info(f"AgentMaster ID: {self.agent_id.uid}")
@@ -57,13 +57,13 @@ class AgentMaster(Agent):
     @action
     async def register_agent(self, agentId: uuid.UUID) -> str:
         logging.info(f"register_agent: {agentId}")
-        self.peer_agent = agentId
+        self.peer_agent_uid = agentId
         logging.info(f"Type of Agent_id: {type(agentId)}; AgentId: "+ str(agentId))
         return f"{agentId}"
 
     @action
     async def _get_peer_agent(self):
-        return self.peer_agent
+        return self.peer_agent_uid
 
     @action
     async def say_name(self) -> ToolResult:
@@ -74,33 +74,23 @@ class AgentMaster(Agent):
                                            port=LOCAL_MCP_PORT)
         return tool_result
 
-    @action
-    async def echo(self, user_msg: str) -> ToolResult:
-        logging.info(f"[Agent Master] Gonna execute my local tool 'echo'...")
-        tool_result = await async_run_tool(tool_name="echo",
-                                           kwargs={"user_msg": user_msg},
-                                           host=LOCAL_MCP_HOST,
-                                           port=LOCAL_MCP_PORT)
-        return tool_result
-
-    @flowcept_task
-    async def execute_remote_tool(self, tool_name:str, remote_tool_kwargs: Dict=None, agent_uid=None) -> Dict:
+    async def execute_remote_tool(self, tool_name: str, remote_tool_kwargs: Dict=None, remote_agent_uid=None) -> ToolResult:
         logging.info(f"AgentMaster will execute tool {tool_name} on peer agent.")
-        handle = Handle(AgentId(uid=self.peer_agent))
+        handle = Handle(AgentId(uid=self.peer_agent_uid))
         _tool_func = getattr(handle, tool_name)
-        response: Dict = await _tool_func()
-        logging.info(response)
-        return response
-        # return {
-        #     "agent_id": str(self.agent_id.uid),
-        #     "message": response
-        # }
+        tool_result: ToolResult = await _tool_func(**(remote_tool_kwargs or {}))
+        logging.info(f"AgentMaster executed tool {tool_name} on peer agent.")
+        logging.info(tool_result)
+        return tool_result
 
     async def start_interaction(self):
         logging.info("Started interaction")
         local_tool_result = await self.say_name()
-        remote_tool_result = await self.execute_remote_tool(tool_name="say_name2", remote_tool_kwargs=None)
-        logging.info(f"Remote Tool Result: {remote_tool_result}")
+        remote_tool_result = await self.execute_remote_tool(tool_name="say_name", remote_tool_kwargs=None, )
+        logging.info(f"SayName Remote Tool Result: {remote_tool_result}")
+
+        remote_tool_result = await self.execute_remote_tool(tool_name="echo", remote_tool_kwargs={"user_msg": "hey!"})
+        logging.info(f"Echo Remote Tool Result: {remote_tool_result}")
 
         logging.info(f"Sending Academy done to peer.")
         await self.execute_remote_tool(tool_name="academy_done", remote_tool_kwargs=None)
@@ -122,9 +112,9 @@ async def main():
             await asyncio.sleep(1)
         await agent_master.start_interaction()
 
-        logging.info("Waiting 5 s.")
-        await asyncio.sleep(5)
-        logging.info("Done waiting 5 s.")
+        t = 1
+        logging.info(f"Waiting {t} s.")
+        await asyncio.sleep(t)
         await hdl.shutdown()
         logging.info("Shutting down.")
 
@@ -133,6 +123,6 @@ if __name__ == "__main__":
     # Flowcept(save_workflow=False, start_persistence=False, check_safe_stops=False).start()
     asyncio.run(main())
     # Flowcept
-    prov_messages = Flowcept.read_buffer_file()
-    print(json.dumps(prov_messages, indent=2))
+    #prov_messages = Flowcept.read_buffer_file()
+    #print(json.dumps(prov_messages, indent=2))
 

@@ -46,7 +46,6 @@ executor = ThreadPoolExecutor(
     initializer=init_logging,
 )
 
-# agent_master_id = "27f6216e-092f-4eb1-86d6-2bac58abdeed"
 
 class AgentMaster(Agent):
     pass
@@ -73,34 +72,16 @@ class AgentAnalyzer(Agent):
                             allow_subclasses=False)
         logging.info(f"[Discover] AgentMaster IDs: {master_ids}")
         if len(master_ids) > 1:
-            raise Exception("Too many masters.")
+            for m_id in master_ids:
+                await self.agent_exchange_client.terminate(m_id)
+                logging.warning("Too many masters. We killed them all. Start the whole thing. This is a temp workaround.")
         elif not len(master_ids):
             raise Exception("There is no master.")
 
         return master_ids[0]
 
-    async def execute_local_tool(self) -> ToolResult:
-        logging.info(f"[Agent 2] Gonna run local tool 'say_name'...")
-        kwargs = None
-        tool_result = await async_run_tool(tool_name="say_name", kwargs=kwargs, host=LOCAL_MCP_HOST, port=LOCAL_MCP_PORT)
-        return tool_result
-
-    # @action
-    # async def agent_2_special_tool(self, tool_input_data: str) -> Dict:
-    #     logging.info(f"Message from master: {tool_input_data}")
-    #     self.agent2_tool_input_data = tool_input_data
-    #
-    #     local_tool_result = await self.execute_local_tool()
-    #
-    #     resp = {
-    #         "agent_id": str(self.agent_id.uid),
-    #         "agent2_tool_input_data": self.agent2_tool_input_data,
-    #         "agent2_tool_output_data": local_tool_result.result
-    #     }
-    #     return resp
-
     @action
-    async def say_name2(self) -> ToolResult:
+    async def say_name(self) -> ToolResult:
         logging.info(f"[Agent 2] Gonna execute my local tool 'say_name'...")
         tool_result = await async_run_tool(tool_name="say_name",
                                            kwargs=None,
@@ -108,11 +89,21 @@ class AgentAnalyzer(Agent):
                                            port=LOCAL_MCP_PORT)
         return tool_result
 
+    #@flowcept_task
     @action
-    async def academy_done(self) -> bool:
+    async def echo(self, user_msg: str) -> ToolResult:
+        logging.info(f"[Agent Master] Gonna execute my local tool 'echo'... {user_msg}")
+        tool_result = await async_run_tool(tool_name="echo",
+                                           kwargs={"user_msg": user_msg},
+                                           host=LOCAL_MCP_HOST,
+                                           port=LOCAL_MCP_PORT)
+        return tool_result
+
+    @action
+    async def academy_done(self) -> ToolResult:
         logging.info(f"[Agent 2] Received done signal!")
         self.academy_done_flag = True
-        return True
+        return ToolResult(code=201, result="yes")
 
     @action
     async def get_academy_done_flag(self):
