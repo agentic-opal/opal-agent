@@ -92,7 +92,7 @@ class AgentAnalyzer(Agent):
     #@flowcept_task
     @action
     async def echo(self, user_msg: str) -> ToolResult:
-        logging.info(f"[Agent Master] Gonna execute my local tool 'echo'... {user_msg}")
+        logging.info(f"[Agent 2] Gonna execute my local tool 'echo'... {user_msg}")
         tool_result = await async_run_tool(tool_name="echo",
                                            kwargs={"user_msg": user_msg},
                                            host=LOCAL_MCP_HOST,

@@ -3,22 +3,19 @@ import logging
 import json
 import uuid
 from concurrent.futures import ThreadPoolExecutor
-from typing import Dict, Tuple, Union, Any
 
 from academy.agent import Agent
 from academy.agent import action
-from academy.handle import Handle
-from academy.exchange import RedisExchangeFactory, HttpExchangeFactory
+from academy.exchange import RedisExchangeFactory
 from academy.manager import Manager
 from academy.logging import init_logging
-from academy.identifier import AgentId
 
 from flowcept.agents import ToolResult
 from flowcept.flowcept_api.flowcept_controller import Flowcept
 from flowcept.instrumentation.flowcept_decorator import flowcept
 from flowcept.instrumentation.flowcept_task import flowcept_task
 
-from academy_utils import async_run_tool
+from academy_utils import async_run_tool, execute_remote_tool
 
 factory = RedisExchangeFactory(
     hostname="localhost",
@@ -65,6 +62,7 @@ class AgentMaster(Agent):
     async def _get_peer_agent(self):
         return self.peer_agent_uid
 
+    @flowcept_task
     @action
     async def say_name(self) -> ToolResult:
         logging.info(f"[Agent Master] Gonna execute my local tool 'say_name'...")
@@ -74,29 +72,28 @@ class AgentMaster(Agent):
                                            port=LOCAL_MCP_PORT)
         return tool_result
 
-    async def execute_remote_tool(self, tool_name: str, remote_tool_kwargs: Dict=None, remote_agent_uid=None) -> ToolResult:
-        logging.info(f"AgentMaster will execute tool {tool_name} on peer agent.")
-        handle = Handle(AgentId(uid=self.peer_agent_uid))
-        _tool_func = getattr(handle, tool_name)
-        tool_result: ToolResult = await _tool_func(**(remote_tool_kwargs or {}))
-        logging.info(f"AgentMaster executed tool {tool_name} on peer agent.")
-        logging.info(tool_result)
+    @flowcept_task
+    @action
+    async def echo(self, user_msg: str) -> ToolResult:
+        logging.info(f"[Agent Master] Gonna execute my local tool 'echo'... {user_msg}")
+        tool_result = await async_run_tool(tool_name="echo",
+                                           kwargs={"user_msg": user_msg},
+                                           host=LOCAL_MCP_HOST,
+                                           port=LOCAL_MCP_PORT)
         return tool_result
 
     async def start_interaction(self):
         logging.info("Started interaction")
-        local_tool_result = await self.say_name()
-        remote_tool_result = await self.execute_remote_tool(tool_name="say_name", remote_tool_kwargs=None, )
+        remote_tool_result = await execute_remote_tool(remote_agent_uid=self.peer_agent_uid, tool_name="say_name")
         logging.info(f"SayName Remote Tool Result: {remote_tool_result}")
-
-        remote_tool_result = await self.execute_remote_tool(tool_name="echo", remote_tool_kwargs={"user_msg": "hey!"})
+        remote_tool_result = await execute_remote_tool(remote_agent_uid=self.peer_agent_uid,
+                                                       tool_name="echo", remote_tool_kwargs={"user_msg": "hey!"})
         logging.info(f"Echo Remote Tool Result: {remote_tool_result}")
 
         logging.info(f"Sending Academy done to peer.")
-        await self.execute_remote_tool(tool_name="academy_done", remote_tool_kwargs=None)
+        await execute_remote_tool(remote_agent_uid=self.peer_agent_uid, tool_name="academy_done")
 
         return True
-
 
 
 @flowcept
@@ -106,10 +103,16 @@ async def main():
             executors=executor,
     ) as manager:
         agent_master = AgentMaster()
+        name = await agent_master.say_name()
+        logging.info(f"Local say_name tool result: {name}")
+        echo_msg = await agent_master.echo(user_msg="Local user msg text!")
+        logging.info(f"Local echo tool result: {echo_msg}")
+
         hdl = await manager.launch(agent_master)
         while await hdl._get_peer_agent() == None:
             logging.info("Waiting for peer to register...")
             await asyncio.sleep(1)
+
         await agent_master.start_interaction()
 
         t = 1
@@ -120,9 +123,8 @@ async def main():
 
 
 if __name__ == "__main__":
-    # Flowcept(save_workflow=False, start_persistence=False, check_safe_stops=False).start()
     asyncio.run(main())
     # Flowcept
-    #prov_messages = Flowcept.read_buffer_file()
-    #print(json.dumps(prov_messages, indent=2))
+    prov_messages = Flowcept.read_buffer_file()
+    print(json.dumps(prov_messages, indent=2))
 

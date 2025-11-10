@@ -1,9 +1,22 @@
 import json
+import logging
 from typing import Any, Callable, Dict, List, Union
 
+from academy.handle import Handle
+from academy.identifier import AgentId
 from flowcept.agents import ToolResult
 from mcp.client.session import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
+
+
+async def execute_remote_tool(remote_agent_uid: str, tool_name: str, remote_tool_kwargs: Dict = None) -> ToolResult:
+    logging.info(f"AgentMaster will execute tool {tool_name} on peer agent.")
+    handle = Handle(AgentId(uid=remote_agent_uid))
+    _tool_func = getattr(handle, tool_name)
+    tool_result: ToolResult = await _tool_func(**(remote_tool_kwargs or {}))
+    logging.info(f"AgentMaster executed tool {tool_name} on peer agent.")
+    logging.info(tool_result)
+    return tool_result
 
 
 async def async_run_tool(
