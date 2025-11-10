@@ -78,7 +78,7 @@ class AgentAnalyzer(Agent):
 
         return master_ids[0]
 
-    async def run_local_tool(self) -> ToolResult:
+    async def execute_local_tool(self) -> ToolResult:
         logging.info(f"[Agent 2] Gonna run local tool 'say_name'...")
         kwargs = None
         tool_result = await async_run_tool(tool_name="say_name", kwargs=kwargs, host=LOCAL_MCP_HOST, port=LOCAL_MCP_PORT)
@@ -89,7 +89,7 @@ class AgentAnalyzer(Agent):
         logging.info(f"Message from master: {tool_input_data}")
         self.agent2_tool_input_data = tool_input_data
 
-        local_tool_result = await self.run_local_tool()
+        local_tool_result = await self.execute_local_tool()
 
         resp = {
             "agent_id": str(self.agent_id.uid),

@@ -12,11 +12,11 @@ from academy.exchange import RedisExchangeFactory, HttpExchangeFactory
 from academy.manager import Manager
 from academy.logging import init_logging
 from academy.identifier import AgentId
-#from flowcept import flowcept_task
-#from flowcept.instrumentation.flowcept_decorator import flowcept
-#from flowcept.flowcept_api.flowcept_controller import Flowcept
 
 from flowcept.agents import ToolResult
+from flowcept.flowcept_api.flowcept_controller import Flowcept
+from flowcept.instrumentation.flowcept_decorator import flowcept
+from flowcept.instrumentation.flowcept_task import flowcept_task
 
 from academy_utils import async_run_tool
 
@@ -66,7 +66,13 @@ class AgentMaster(Agent):
     async def get_registered_agent(self):
         return self.registered_agent
 
-    # @flowcept_task
+    async def execute_local_tool(self) -> ToolResult:
+        logging.info(f"[Agent Master] Gonna run tool 'say_name'...")
+        kwargs = None
+        tool_result = await async_run_tool(tool_name="say_name", kwargs=kwargs, host=LOCAL_MCP_HOST, port=LOCAL_MCP_PORT)
+        return tool_result
+
+    @flowcept_task
     async def execute_remote_tool(self, tool_input_data: Dict) -> Dict:
         logging.info(f"AgentMaster will send data to {self.registered_agent}")
         response: Dict = await Handle(AgentId(uid=self.registered_agent)).agent_2_special_tool(tool_input_data)
@@ -81,19 +87,15 @@ class AgentMaster(Agent):
         logging.info("Started interaction")
         # self.agent_run_sync()
         # await asyncio.sleep(3)
-        local_tool_result = await self.run_local_tool()
+        local_tool_result = await self.execute_local_tool()
         data = {"msg_from_agent": local_tool_result.result}
         remote_tool_result = await self.execute_remote_tool(data)
         logging.info(f"Remote Tool Result: {remote_tool_result}")
         return str(self.agent_id.uid), remote_tool_result
 
-    async def run_local_tool(self) -> ToolResult:
-        logging.info(f"[Agent Master] Gonna run tool 'say_name'...")
-        kwargs = None
-        tool_result = await async_run_tool(tool_name="say_name", kwargs=kwargs, host=LOCAL_MCP_HOST, port=LOCAL_MCP_PORT)
-        return tool_result
 
-#@flowcept
+
+@flowcept
 async def main():
     async with await Manager.from_exchange_factory(
             factory=factory,
@@ -106,14 +108,18 @@ async def main():
             await asyncio.sleep(1)
         await agent_master.start_interaction()
         # agent_master.agent_shutdown()
+
+        logging.info("Waiting 5 s.")
         await asyncio.sleep(5)
+        logging.info("Done waiting 5 s.")
         await hdl.shutdown()
-        # await manager.wait([hdl])
+        logging.info("Shutting down.")
 
 
 if __name__ == "__main__":
     # Flowcept(save_workflow=False, start_persistence=False, check_safe_stops=False).start()
     asyncio.run(main())
     # Flowcept
-    # prov_messages = Flowcept.read_buffer_file()
-    # print(json.dumps(prov_messages, indent=2))
+    prov_messages = Flowcept.read_buffer_file()
+    print(json.dumps(prov_messages, indent=2))
+
