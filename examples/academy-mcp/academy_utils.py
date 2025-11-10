@@ -9,7 +9,7 @@ from mcp.client.session import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
 
 
-async def execute_remote_tool(remote_agent_uid: str, tool_name: str, remote_tool_kwargs: Dict = None) -> ToolResult:
+async def async_run_remote_tool(remote_agent_uid: str, tool_name: str, remote_tool_kwargs: Dict = None) -> ToolResult:
     logging.info(f"AgentMaster will execute tool {tool_name} on peer agent.")
     handle = Handle(AgentId(uid=remote_agent_uid))
     _tool_func = getattr(handle, tool_name)

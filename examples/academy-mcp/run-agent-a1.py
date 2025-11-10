@@ -15,7 +15,7 @@ from flowcept.flowcept_api.flowcept_controller import Flowcept
 from flowcept.instrumentation.flowcept_decorator import flowcept
 from flowcept.instrumentation.flowcept_task import flowcept_task
 
-from academy_utils import async_run_tool, execute_remote_tool
+from academy_utils import async_run_tool, async_run_remote_tool
 
 factory = RedisExchangeFactory(
     hostname="localhost",
@@ -84,14 +84,14 @@ class AgentMaster(Agent):
 
     async def start_interaction(self):
         logging.info("Started interaction")
-        remote_tool_result = await execute_remote_tool(remote_agent_uid=self.peer_agent_uid, tool_name="say_name")
+        remote_tool_result = await async_run_remote_tool(remote_agent_uid=self.peer_agent_uid, tool_name="say_name")
         logging.info(f"SayName Remote Tool Result: {remote_tool_result}")
-        remote_tool_result = await execute_remote_tool(remote_agent_uid=self.peer_agent_uid,
-                                                       tool_name="echo", remote_tool_kwargs={"user_msg": "hey!"})
+        remote_tool_result = await async_run_remote_tool(remote_agent_uid=self.peer_agent_uid,
+                                                         tool_name="echo", remote_tool_kwargs={"user_msg": "hey!"})
         logging.info(f"Echo Remote Tool Result: {remote_tool_result}")
 
         logging.info(f"Sending Academy done to peer.")
-        await execute_remote_tool(remote_agent_uid=self.peer_agent_uid, tool_name="academy_done")
+        await async_run_remote_tool(remote_agent_uid=self.peer_agent_uid, tool_name="academy_done")
 
         return True
 
