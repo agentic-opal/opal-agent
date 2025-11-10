@@ -53,7 +53,8 @@ class AgentMaster(Agent):
 
 
 class AgentAnalyzer(Agent):
-    agent2_tool_input_data: Dict = None
+
+    academy_done_flag = False
 
     async def agent_on_startup(self) -> None:
         await self._register(self.agent_id.uid)
@@ -84,23 +85,38 @@ class AgentAnalyzer(Agent):
         tool_result = await async_run_tool(tool_name="say_name", kwargs=kwargs, host=LOCAL_MCP_HOST, port=LOCAL_MCP_PORT)
         return tool_result
 
+    # @action
+    # async def agent_2_special_tool(self, tool_input_data: str) -> Dict:
+    #     logging.info(f"Message from master: {tool_input_data}")
+    #     self.agent2_tool_input_data = tool_input_data
+    #
+    #     local_tool_result = await self.execute_local_tool()
+    #
+    #     resp = {
+    #         "agent_id": str(self.agent_id.uid),
+    #         "agent2_tool_input_data": self.agent2_tool_input_data,
+    #         "agent2_tool_output_data": local_tool_result.result
+    #     }
+    #     return resp
+
     @action
-    async def agent_2_special_tool(self, tool_input_data: str) -> Dict:
-        logging.info(f"Message from master: {tool_input_data}")
-        self.agent2_tool_input_data = tool_input_data
-
-        local_tool_result = await self.execute_local_tool()
-
-        resp = {
-            "agent_id": str(self.agent_id.uid),
-            "agent2_tool_input_data": self.agent2_tool_input_data,
-            "agent2_tool_output_data": local_tool_result.result
-        }
-        return resp
+    async def say_name2(self) -> ToolResult:
+        logging.info(f"[Agent 2] Gonna execute my local tool 'say_name'...")
+        tool_result = await async_run_tool(tool_name="say_name",
+                                           kwargs=None,
+                                           host=LOCAL_MCP_HOST,
+                                           port=LOCAL_MCP_PORT)
+        return tool_result
 
     @action
-    async def get_agent2_tool_input_data(self):
-        return self.agent2_tool_input_data
+    async def academy_done(self) -> bool:
+        logging.info(f"[Agent 2] Received done signal!")
+        self.academy_done_flag = True
+        return True
+
+    @action
+    async def get_academy_done_flag(self):
+        return self.academy_done_flag
 
 #@flowcept()
 async def main():
@@ -110,8 +126,12 @@ async def main():
     ) as manager:
         hdl = await manager.launch(AgentAnalyzer)
         # await manager.wait([hdl])
-        while await hdl.get_agent2_tool_input_data() == None:
-            logging.info("Waiting for agent2 input data from master...")
+        # while await hdl.get_agent2_tool_input_data() == None:
+        #     logging.info("Waiting for agent2 input data from master...")
+        #     await asyncio.sleep(1)
+
+        while not await hdl.get_academy_done_flag():
+            logging.info("Waiting for Done signal from master...")
             await asyncio.sleep(1)
         await hdl.shutdown()
 
