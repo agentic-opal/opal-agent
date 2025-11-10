@@ -88,7 +88,7 @@ async def main():
     ) as manager:
         agent_manager = AgentMaster()
         hdl = await manager.launch(agent_manager)
-        while await hdl.get_registered_agent() == None:
+        while await hdl._get_peer_agent() == None:
             logging.info("Waiting for peer to register...")
             await asyncio.sleep(1)
         await agent_manager.start_simulation()
