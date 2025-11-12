@@ -78,6 +78,7 @@ class Agent2(Agent):
     async def get_academy_done_flag(self):
         return self.academy_done_flag
 
+
 async def main():
     async with await Manager.from_exchange_factory(
             factory=factory,

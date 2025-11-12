@@ -33,11 +33,20 @@ async def academy_peer_tool() -> ToolResult:
     academy_agent_id = mcp_agent.academy_agent2_id
     response = await Handle(academy_agent_id).say_name_agent2()
     print(response)
-    if isinstance(response, ToolResult):
-        return ToolResult(code=200, result="It worked!!")
-    else:
-        return ToolResult(code=200, result="It kinda worked!!")
+    return response
 
+@mcp_agent.tool()
+async def academy_peer_tool2() -> ToolResult:
+    academy_agent1_handle = mcp_agent.academy_agent1_handle
+    while (peer_agent_id := await academy_agent1_handle.get_peer_agent_id()) == None:
+        logging.info("Waiting for peer agent to register...")
+        await asyncio.sleep(1)
+
+    print("This is the peer id", peer_agent_id)
+    setattr(mcp_agent, "academy_agent2_id", peer_agent_id)
+    response = await Handle(peer_agent_id).say_name_agent2()
+    print(response)
+    return response
 
 class Agent1(Agent):
     peer_agent_id: AgentId = None
@@ -88,9 +97,9 @@ async def main():
         #master_id = await handle.get_uid()
         #print(master_id)
         print("This is the master id", agent1.agent_id)
-        print("This is the peer id", peer_agent_id)
+
         setattr(mcp_agent, "academy_agent1_id", agent1.agent_id)
-        setattr(mcp_agent, "academy_agent2_id", peer_agent_id)
+        setattr(mcp_agent, "academy_agent1_handle", handle)
 
         from uvicorn import Config, Server
         config = Config(
